@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WorkFancy</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:system-ui,sans-serif;background:#111113;color:#f5f4f0;min-height:100vh;}
+#loading{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;gap:16px;text-align:center;padding:2rem;}
+.ring{width:48px;height:48px;border-radius:50%;border:2px solid #27272d;border-top-color:#f0c040;animation:spin 1s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+.logo{font-family:system-ui,sans-serif;font-size:16px;font-weight:800;letter-spacing:-0.03em;color:#f5f4f0;margin-bottom:8px;}
+.logo span{color:#f0c040;}
+#error{display:none;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;gap:12px;text-align:center;padding:2rem;}
+#error h2{font-size:1.4rem;font-weight:700;letter-spacing:-0.02em;}
+#error p{font-size:13.5px;color:#888680;line-height:1.7;}
+#error a{color:#f0c040;text-decoration:none;font-size:13px;margin-top:8px;display:inline-block;}
+#frame{width:100%;height:100vh;border:none;display:none;}
+</style>
+</head>
+<body>
+
+<div id="loading">
+  <div class="logo">Work<span>Fancy</span></div>
+  <div class="ring"></div>
+  <p style="font-size:13px;color:#888680;">Loading your site…</p>
+</div>
+
+<div id="error">
+  <div class="logo">Work<span>Fancy</span></div>
+  <h2>Site not found</h2>
+  <p>This link may have expired or doesn't exist.<br>Check the URL and try again.</p>
+  <a href="https://fanysoo98.github.io/WorkFancyNew/">← Back to WorkFancy</a>
+</div>
+
+<iframe id="frame" title="Published site"></iframe>
+
+<script>
+const SB_URL = 'https://xhadamzblsbjzaapmskx.supabase.co';
+const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhoYWRhbXpibHNianphYXBtc2t4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc2NjY5MzQsImV4cCI6MjA5MzI0MjkzNH0.pNEVOvUBgYKbIizQn-3hcdxg7uzqwP6CrW2JBBFbxe4';
+
+async function load(){
+  // get site id from URL: /view/abc123 or ?id=abc123
+  const path = window.location.pathname;
+  const parts = path.split('/').filter(Boolean);
+  const id = parts[parts.length-1] || new URLSearchParams(window.location.search).get('id');
+
+  if(!id || id === 'view'){
+    showError(); return;
+  }
+
+  try {
+    const res = await fetch(SB_URL+'/rest/v1/sites?id=eq.'+id+'&select=html,title', {
+      headers:{
+        'apikey': SB_KEY,
+        'Authorization': 'Bearer '+SB_KEY,
+      }
+    });
+
+    if(!res.ok) throw new Error('Fetch failed');
+    const data = await res.json();
+
+    if(!data.length){ showError(); return; }
+
+    const { html, title } = data[0];
+    document.title = title + ' — WorkFancy';
+
+    // render in iframe
+    const frame = document.getElementById('frame');
+    frame.srcdoc = html;
+    frame.style.display = 'block';
+    document.getElementById('loading').style.display = 'none';
+
+  } catch(e){
+    showError();
+  }
+}
+
+function showError(){
+  document.getElementById('loading').style.display = 'none';
+  document.getElementById('error').style.display = 'flex';
+}
+
+load();
+</script>
+</body>
+</html>

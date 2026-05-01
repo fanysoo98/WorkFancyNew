@@ -928,41 +928,68 @@ function doSearch(v){
 </body></html>`;
 }
 
-// ── Publish & Share ───────────────────────
+// ── Supabase config ────────────────────────
+const SB_URL = 'https://xhadamzblsbjzaapmskx.supabase.co';
+const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhoYWRhbXpibHNianphYXBtc2t4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc2NjY5MzQsImV4cCI6MjA5MzI0MjkzNH0.pNEVOvUBgYKbIizQn-3hcdxg7uzqwP6CrW2JBBFbxe4';
+const SITE_BASE = 'https://fanysoo98.github.io/WorkFancyNew/view/';
+
+async function sbFetch(path, opts={}){
+  const res = await fetch(SB_URL+'/rest/v1/'+path, {
+    headers:{
+      'apikey': SB_KEY,
+      'Authorization': 'Bearer '+SB_KEY,
+      'Content-Type': 'application/json',
+      'Prefer': opts.prefer||'',
+      ...opts.headers
+    },
+    ...opts
+  });
+  return res;
+}
+
+// ── Publish & Share ────────────────────────
 let currentSiteId = null;
 
-function publish(){
+async function publish(){
   if(!ST.html){toast('Generate a site first!');return;}
-  // show modal in publishing state
   document.getElementById('pub-publishing').style.display='block';
   document.getElementById('pub-done').style.display='none';
   document.getElementById('pub-backdrop').classList.add('open');
   document.body.style.overflow='hidden';
 
-  // simulate publish delay (Phase 1: localStorage)
-  setTimeout(()=>{
+  try {
     const id = Math.random().toString(36).slice(2,8);
     const title = document.getElementById('e-title')?.value || (ST.file?ST.file.name.replace(/\.[^.]+$/,''):'My Data');
-    const site = {
-      id, title,
-      tpl: ST.tpl,
-      html: ST.html,
-      url: `workfancy.com/view/${id}`,
-      created: new Date().toISOString()
-    };
-    // save to localStorage
-    const sites = getSites();
-    sites.unshift(site);
-    localStorage.setItem('wf_sites', JSON.stringify(sites));
-    currentSiteId = id;
 
-    // show done state
+    // save to Supabase
+    const res = await sbFetch('sites', {
+      method: 'POST',
+      prefer: 'return=minimal',
+      body: JSON.stringify({ id, title, template: ST.tpl, html: ST.html })
+    });
+
+    if(!res.ok) throw new Error('Failed to publish');
+
+    currentSiteId = id;
+    const url = SITE_BASE + id;
+
+    // also save to localStorage as cache
+    const cached = getLocalSites();
+    cached.unshift({ id, title, tpl: ST.tpl, url, created: new Date().toISOString() });
+    localStorage.setItem('wf_sites', JSON.stringify(cached));
+
     document.getElementById('pub-publishing').style.display='none';
     document.getElementById('pub-done').style.display='block';
-    document.getElementById('pub-link').textContent = site.url;
+    document.getElementById('pub-link').textContent = url;
     document.getElementById('pub-title').textContent = `"${title}" is live`;
     updateSitesCount();
-  }, 1800);
+
+  } catch(err) {
+    document.getElementById('pub-backdrop').classList.remove('open');
+    document.body.style.overflow='';
+    toast('Publish failed — check your connection and try again');
+    console.error(err);
+  }
 }
 
 function closePub(e){
@@ -975,28 +1002,25 @@ function copyLink(){
   const link = document.getElementById('pub-link').textContent;
   navigator.clipboard.writeText(link).then(()=>{
     const btn = document.getElementById('copy-btn');
-    btn.textContent='Copied!';
-    btn.style.color='#4ade80';
+    btn.textContent='Copied!';btn.style.color='#4ade80';
     setTimeout(()=>{btn.textContent='Copy';btn.style.color='';},2000);
-  }).catch(()=>{
-    toast('workfancy.com/view/'+currentSiteId+' — copy manually');
-  });
+  }).catch(()=>{ toast('Copy: '+link); });
 }
 
 function shareLink(platform){
-  const link = encodeURIComponent('https://'+document.getElementById('pub-link').textContent);
+  const link = encodeURIComponent(document.getElementById('pub-link').textContent);
   const text = encodeURIComponent('Check out my searchable data site, made with WorkFancy ✦');
   const urls = {
-    twitter: `https://twitter.com/intent/tweet?text=${text}&url=${link}`,
-    linkedin: `https://www.linkedin.com/sharing/share-offsite/?url=${link}`
+    twitter:`https://twitter.com/intent/tweet?text=${text}&url=${link}`,
+    linkedin:`https://www.linkedin.com/sharing/share-offsite/?url=${link}`
   };
   window.open(urls[platform],'_blank');
 }
 
 function openSiteView(){
-  // In Phase 1 just preview inline; Phase 2 will open real URL
+  const link = document.getElementById('pub-link').textContent;
+  window.open(link,'_blank');
   closePub();
-  toast('In Phase 2 this will open workfancy.com/view/'+currentSiteId);
 }
 
 // ── My Sites drawer ────────────────────────
@@ -1009,28 +1033,46 @@ function toggleMySites(){
   if(drawerOpen) renderSitesList();
 }
 
-function getSites(){
+function getLocalSites(){
   try{ return JSON.parse(localStorage.getItem('wf_sites')||'[]'); }
   catch(e){ return []; }
 }
 
+async function getSites(){
+  // try Supabase first
+  try {
+    const res = await sbFetch('sites?select=id,title,template,created_at&order=created_at.desc&limit=50');
+    if(res.ok){
+      const data = await res.json();
+      return data.map(s=>({
+        id: s.id, title: s.title, tpl: s.template,
+        url: SITE_BASE+s.id,
+        created: s.created_at
+      }));
+    }
+  } catch(e){}
+  // fallback to localStorage
+  return getLocalSites();
+}
+
 function updateSitesCount(){
-  const n = getSites().length;
+  const n = getLocalSites().length;
   const el = document.getElementById('sites-count');
   if(n>0){el.textContent=n;el.style.display='';}
   else{el.style.display='none';}
 }
 
-function renderSitesList(){
-  const sites = getSites();
+async function renderSitesList(){
   const list = document.getElementById('sites-list');
+  list.innerHTML=`<div style="text-align:center;padding:2rem;color:var(--text3);font-size:12px;">Loading…</div>`;
+  const sites = await getSites();
   if(!sites.length){
     list.innerHTML=`<div style="text-align:center;padding:3rem 1rem;color:var(--text3);font-size:13px;">No published sites yet.<br>Generate and publish one first!</div>`;
     return;
   }
-  list.innerHTML = sites.map(s=>{
-    const date = new Date(s.created).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'});
-    const colors = {professional:'#1a1a2e',cute:'#ff6b9d',educational:'#1565c0',fun:'#7c3aed'};
+  const colors={professional:'#1a1a2e',cute:'#ff6b9d',educational:'#1565c0',fun:'#7c3aed'};
+  list.innerHTML=sites.map(s=>{
+    const date=new Date(s.created).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'});
     return `<div style="background:var(--bg3);border:1px solid var(--line);border-radius:var(--r);padding:12px 14px;">
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
         <div style="width:24px;height:24px;border-radius:6px;background:${colors[s.tpl]||'#333'};flex-shrink:0;"></div>
@@ -1038,19 +1080,26 @@ function renderSitesList(){
           <div style="font-size:12.5px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${s.title}</div>
           <div style="font-size:10px;color:var(--text3);font-family:'DM Mono',monospace;">${date}</div>
         </div>
-        <button onclick="deleteSite('${s.id}')" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:15px;line-height:1;padding:0 2px;transition:color 0.15s;" title="Delete">×</button>
+        <button onclick="deleteSite('${s.id}')" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:15px;line-height:1;padding:0 2px;" title="Delete">×</button>
       </div>
       <div style="font-family:'DM Mono',monospace;font-size:10.5px;color:var(--gold);background:var(--bg4);border-radius:6px;padding:6px 10px;display:flex;align-items:center;justify-content:space-between;gap:8px;">
         <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${s.url}</span>
-        <button onclick="copySiteLink('${s.url}')" style="background:var(--bg3);border:1px solid var(--line2);border-radius:5px;padding:3px 8px;font-family:'Syne',sans-serif;font-size:10px;font-weight:600;color:var(--text2);cursor:pointer;flex-shrink:0;">Copy</button>
+        <div style="display:flex;gap:5px;flex-shrink:0;">
+          <button onclick="window.open('${s.url}','_blank')" style="background:var(--bg3);border:1px solid var(--line2);border-radius:5px;padding:3px 8px;font-family:'Syne',sans-serif;font-size:10px;font-weight:600;color:var(--text2);cursor:pointer;">Open</button>
+          <button onclick="copySiteLink('${s.url}')" style="background:var(--bg3);border:1px solid var(--line2);border-radius:5px;padding:3px 8px;font-family:'Syne',sans-serif;font-size:10px;font-weight:600;color:var(--text2);cursor:pointer;">Copy</button>
+        </div>
       </div>
     </div>`;
   }).join('');
 }
 
-function deleteSite(id){
-  const sites = getSites().filter(s=>s.id!==id);
-  localStorage.setItem('wf_sites',JSON.stringify(sites));
+async function deleteSite(id){
+  try {
+    await sbFetch('sites?id=eq.'+id, { method:'DELETE' });
+  } catch(e){}
+  // remove from localStorage cache too
+  const cached = getLocalSites().filter(s=>s.id!==id);
+  localStorage.setItem('wf_sites', JSON.stringify(cached));
   updateSitesCount();
   renderSitesList();
 }
@@ -1060,10 +1109,9 @@ function copySiteLink(url){
   toast('Link copied ✓');
 }
 
-// init count on load
+// init
 updateSitesCount();
 
-// close drawer on Escape
 document.addEventListener('keydown',e=>{
   if(e.key==='Escape'){
     closePub();
