@@ -41,10 +41,8 @@ const SB_URL = 'https://xhadamzblsbjzaapmskx.supabase.co';
 const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhoYWRhbXpibHNianphYXBtc2t4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc2NjY5MzQsImV4cCI6MjA5MzI0MjkzNH0.pNEVOvUBgYKbIizQn-3hcdxg7uzqwP6CrW2JBBFbxe4';
 
 async function load(){
-  // get site id from URL: /view/abc123 or ?id=abc123
-  const path = window.location.pathname;
-  const parts = path.split('/').filter(Boolean);
-  const id = parts[parts.length-1] || new URLSearchParams(window.location.search).get('id');
+  // get site id from ?id=abc123
+  const id = new URLSearchParams(window.location.search).get('id');
 
   if(!id || id === 'view'){
     showError(); return;
