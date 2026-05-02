@@ -931,21 +931,9 @@ function doSearch(v){
 // ── Supabase config ────────────────────────
 const SB_URL = 'https://xhadamzblsbjzaapmskx.supabase.co';
 const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhoYWRhbXpibHNianphYXBtc2t4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc2NjY5MzQsImV4cCI6MjA5MzI0MjkzNH0.pNEVOvUBgYKbIizQn-3hcdxg7uzqwP6CrW2JBBFbxe4';
-const SITE_BASE = 'https://fanysoo98.github.io/WorkFancyNew/view/';
-
-async function sbFetch(path, opts={}){
-  const res = await fetch(SB_URL+'/rest/v1/'+path, {
-    headers:{
-      'apikey': SB_KEY,
-      'Authorization': 'Bearer '+SB_KEY,
-      'Content-Type': 'application/json',
-      'Prefer': opts.prefer||'',
-      ...opts.headers
-    },
-    ...opts
-  });
-  return res;
-}
+const SITE_BASE = 'https://fanysoo98.github.io/WorkFancyNew/view.html?id=';
+const { createClient } = supabase;
+const db = createClient(SB_URL, SB_KEY);
 
 // ── Publish & Share ────────────────────────
 let currentSiteId = null;
@@ -961,14 +949,9 @@ async function publish(){
     const id = Math.random().toString(36).slice(2,8);
     const title = document.getElementById('e-title')?.value || (ST.file?ST.file.name.replace(/\.[^.]+$/,''):'My Data');
 
-    // save to Supabase
-    const res = await sbFetch('sites', {
-      method: 'POST',
-      prefer: 'return=minimal',
-      body: JSON.stringify({ id, title, template: ST.tpl, html: ST.html })
-    });
-
-    if(!res.ok) throw new Error('Failed to publish');
+    // save to Supabase using SDK
+    const { error } = await db.from('sites').insert({ id, title, template: ST.tpl, html: ST.html });
+    if(error) throw error;
 
     currentSiteId = id;
     const url = SITE_BASE + id;
