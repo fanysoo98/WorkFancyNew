@@ -929,7 +929,7 @@ function doSearch(v){
 }
 
 // ── JSONBin config ────────────────────────
-const JBIN_KEY = '$2a$10$WFancyDefaultMasterKey000';
+const JBIN_KEY = '$2a$10$D00bejRKwTVh9gSJ2v.nvO4gx2/ad3EMrUja4QjTfmpoxOCOy7MWS';
 const SITE_BASE = 'https://fanysoo98.github.io/WorkFancyNew/view.html?id=';
 
 async function saveToCloud(data){
@@ -937,6 +937,7 @@ async function saveToCloud(data){
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
+      'X-Master-Key': JBIN_KEY,
       'X-Bin-Private': 'false'
     },
     body: JSON.stringify(data)
