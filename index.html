@@ -1085,14 +1085,6 @@ async function renderSitesList(){
   }).join('');
 }
 
-async function deleteSite(id){
-  try { await db.from('sites').delete().eq('id', id); } catch(e){}
-  const cached = getLocalSites().filter(s=>s.id!==id);
-  localStorage.setItem('wf_sites', JSON.stringify(cached));
-  updateSitesCount();
-  renderSitesList();
-}
-
 function copySiteLink(url){
   navigator.clipboard.writeText(url).catch(()=>{});
   toast('Link copied ✓');
