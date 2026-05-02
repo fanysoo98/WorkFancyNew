@@ -36,24 +36,20 @@ body{font-family:system-ui,sans-serif;background:#111113;color:#f5f4f0;min-heigh
 
 <iframe id="frame" title="Published site"></iframe>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script>
-const SB_URL = 'https://xhadamzblsbjzaapmskx.supabase.co';
-const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhoYWRhbXpibHNianphYXBtc2t4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc2NjY5MzQsImV4cCI6MjA5MzI0MjkzNH0.pNEVOvUBgYKbIizQn-3hcdxg7uzqwP6CrW2JBBFbxe4';
-const { createClient } = supabase;
-const db = createClient(SB_URL, SB_KEY);
-
 async function load(){
   const id = new URLSearchParams(window.location.search).get('id');
   if(!id){ showError(); return; }
 
   try {
-    const { data, error } = await db.from('sites').select('html,title').eq('id', id).single();
-    if(error || !data){ showError(); return; }
+    const res = await fetch(`https://api.jsonbin.io/v3/b/${id}/latest`);
+    if(!res.ok) throw new Error('Not found');
+    const json = await res.json();
+    const { html, title } = json.record;
 
-    document.title = data.title + ' — WorkFancy';
+    document.title = (title||'My Data') + ' — WorkFancy';
     const frame = document.getElementById('frame');
-    frame.srcdoc = data.html;
+    frame.srcdoc = html;
     frame.style.display = 'block';
     document.getElementById('loading').style.display = 'none';
   } catch(e){
