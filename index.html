@@ -930,6 +930,7 @@ function doSearch(v){
 
 // ── JSONBin config ────────────────────────
 const JBIN_KEY = '$2a$10$D00bejRKwTVh9gSJ2v.nvO4gx2/ad3EMrUja4QjTfmpoxOCOy7MWS';
+const JBIN_ACCESS = '$2a$10$x60R5Wtxe16sW3MrX3P3NOsDR0EcEhBtcwdOuU4rYmr3rclLYGL.q';
 const SITE_BASE = 'https://fanysoo98.github.io/WorkFancyNew/view.html?id=';
 
 async function saveToCloud(data){
@@ -938,6 +939,7 @@ async function saveToCloud(data){
     headers: {
       'Content-Type': 'application/json',
       'X-Master-Key': JBIN_KEY,
+      'X-Access-Key': JBIN_ACCESS,
       'X-Bin-Private': 'false'
     },
     body: JSON.stringify(data)
