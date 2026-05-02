@@ -928,12 +928,30 @@ function doSearch(v){
 </body></html>`;
 }
 
-// ── Supabase config ────────────────────────
-const SB_URL = 'https://xhadamzblsbjzaapmskx.supabase.co';
-const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhoYWRhbXpibHNianphYXBtc2t4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc2NjY5MzQsImV4cCI6MjA5MzI0MjkzNH0.pNEVOvUBgYKbIizQn-3hcdxg7uzqwP6CrW2JBBFbxe4';
+// ── JSONBin config ────────────────────────
+const JBIN_KEY = '$2a$10$WFancyDefaultMasterKey000';
 const SITE_BASE = 'https://fanysoo98.github.io/WorkFancyNew/view.html?id=';
-const { createClient } = supabase;
-const db = createClient(SB_URL, SB_KEY);
+
+async function saveToCloud(data){
+  const res = await fetch('https://api.jsonbin.io/v3/b', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-Bin-Private': 'false'
+    },
+    body: JSON.stringify(data)
+  });
+  if(!res.ok) throw new Error('Save failed: '+res.status);
+  const json = await res.json();
+  return json.metadata.id;
+}
+
+async function loadFromCloud(id){
+  const res = await fetch(`https://api.jsonbin.io/v3/b/${id}/latest`);
+  if(!res.ok) throw new Error('Load failed');
+  const json = await res.json();
+  return json.record;
+}
 
 // ── Publish & Share ────────────────────────
 let currentSiteId = null;
@@ -946,19 +964,16 @@ async function publish(){
   document.body.style.overflow='hidden';
 
   try {
-    const id = Math.random().toString(36).slice(2,8);
     const title = document.getElementById('e-title')?.value || (ST.file?ST.file.name.replace(/\.[^.]+$/,''):'My Data');
 
-    // save to Supabase using SDK
-    const { error } = await db.from('sites').insert({ id, title, template: ST.tpl, html: ST.html });
-    if(error) throw error;
+    // save to JSONBin
+    const binId = await saveToCloud({ title, template: ST.tpl, html: ST.html });
+    currentSiteId = binId;
+    const url = SITE_BASE + binId;
 
-    currentSiteId = id;
-    const url = SITE_BASE + id;
-
-    // also save to localStorage as cache
+    // cache in localStorage
     const cached = getLocalSites();
-    cached.unshift({ id, title, tpl: ST.tpl, url, created: new Date().toISOString() });
+    cached.unshift({ id: binId, title, tpl: ST.tpl, url, created: new Date().toISOString() });
     localStorage.setItem('wf_sites', JSON.stringify(cached));
 
     document.getElementById('pub-publishing').style.display='none';
@@ -970,7 +985,7 @@ async function publish(){
   } catch(err) {
     document.getElementById('pub-backdrop').classList.remove('open');
     document.body.style.overflow='';
-    toast('Publish failed — check your connection and try again');
+    toast('Publish failed — check your connection');
     console.error(err);
   }
 }
@@ -1022,20 +1037,14 @@ function getLocalSites(){
 }
 
 async function getSites(){
-  // try Supabase first
-  try {
-    const res = await sbFetch('sites?select=id,title,template,created_at&order=created_at.desc&limit=50');
-    if(res.ok){
-      const data = await res.json();
-      return data.map(s=>({
-        id: s.id, title: s.title, tpl: s.template,
-        url: SITE_BASE+s.id,
-        created: s.created_at
-      }));
-    }
-  } catch(e){}
-  // fallback to localStorage
   return getLocalSites();
+}
+
+async function deleteSite(id){
+  const cached = getLocalSites().filter(s=>s.id!==id);
+  localStorage.setItem('wf_sites', JSON.stringify(cached));
+  updateSitesCount();
+  renderSitesList();
 }
 
 function updateSitesCount(){
@@ -1077,10 +1086,7 @@ async function renderSitesList(){
 }
 
 async function deleteSite(id){
-  try {
-    await sbFetch('sites?id=eq.'+id, { method:'DELETE' });
-  } catch(e){}
-  // remove from localStorage cache too
+  try { await db.from('sites').delete().eq('id', id); } catch(e){}
   const cached = getLocalSites().filter(s=>s.id!==id);
   localStorage.setItem('wf_sites', JSON.stringify(cached));
   updateSitesCount();
@@ -1092,9 +1098,7 @@ function copySiteLink(url){
   toast('Link copied ✓');
 }
 
-// init
-updateSitesCount();
-
+// close drawer on Escape
 document.addEventListener('keydown',e=>{
   if(e.key==='Escape'){
     closePub();
