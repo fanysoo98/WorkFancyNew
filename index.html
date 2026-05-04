@@ -928,32 +928,26 @@ function doSearch(v){
 </body></html>`;
 }
 
-// ── JSONBin config ────────────────────────
-const JBIN_KEY = '$2a$10$D00bejRKwTVh9gSJ2v.nvO4gx2/ad3EMrUja4QjTfmpoxOCOy7MWS';
-const JBIN_ACCESS = '$2a$10$x60R5Wtxe16sW3MrX3P3NOsDR0EcEhBtcwdOuU4rYmr3rclLYGL.q';
+// ── Cloudflare Worker config ────────────────
+const WORKER_URL = 'https://gentle-rain-32f0.soofany130.workers.dev';
 const SITE_BASE = 'https://fanysoo98.github.io/WorkFancyNew/view.html?id=';
 
 async function saveToCloud(data){
-  const res = await fetch('https://api.jsonbin.io/v3/b', {
+  const id = Math.random().toString(36).slice(2, 10);
+  const res = await fetch(`${WORKER_URL}/save`, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'X-Master-Key': JBIN_KEY,
-      'X-Access-Key': JBIN_ACCESS,
-      'X-Bin-Private': 'false'
-    },
-    body: JSON.stringify(data)
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ ...data, id }),
   });
   if(!res.ok) throw new Error('Save failed: '+res.status);
-  const json = await res.json();
-  return json.metadata.id;
+  return id;
 }
 
 async function loadFromCloud(id){
-  const res = await fetch(`https://api.jsonbin.io/v3/b/${id}/latest`);
+  const res = await fetch(`${WORKER_URL}/get?id=${id}`);
   if(!res.ok) throw new Error('Load failed');
-  const json = await res.json();
-  return json.record;
+  const data = await res.json();
+  return data[0];
 }
 
 // ── Publish & Share ────────────────────────
@@ -969,14 +963,26 @@ async function publish(){
   try {
     const title = document.getElementById('e-title')?.value || (ST.file?ST.file.name.replace(/\.[^.]+$/,''):'My Data');
 
-    // save to JSONBin
-    const binId = await saveToCloud({ title, template: ST.tpl, html: ST.html });
-    currentSiteId = binId;
-    const url = SITE_BASE + binId;
+    const id = await saveToCloud({
+      title,
+      template: ST.tpl,
+      headers: ST.headers,
+      rows: ST.rows,
+      options: {
+        ph: document.getElementById('e-ph')?.value||'Search…',
+        ft: document.getElementById('e-ft')?.value||'Made with WorkFancy',
+        bg: document.getElementById('e-bg')?.value||'',
+        hd: document.getElementById('e-hd')?.value||'',
+        ac: document.getElementById('e-ac')?.value||'',
+        tx: document.getElementById('e-tx')?.value||'',
+      }
+    });
+    currentSiteId = id;
+    const url = SITE_BASE + id;
 
     // cache in localStorage
     const cached = getLocalSites();
-    cached.unshift({ id: binId, title, tpl: ST.tpl, url, created: new Date().toISOString() });
+    cached.unshift({ id, title, tpl: ST.tpl, url, created: new Date().toISOString() });
     localStorage.setItem('wf_sites', JSON.stringify(cached));
 
     document.getElementById('pub-publishing').style.display='none';
