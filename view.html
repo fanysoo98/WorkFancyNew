@@ -83,7 +83,7 @@ async function load(){
 function getStyles(tpl, bg, hd, ac, tx){
   return {
     professional:{ hdr:`background:${hd};color:#f5f4f0;`, tb:'1px solid rgba(0,0,0,.08)', tr:'12px', tbg:'#fff', thbg:'#f2f0ea', thc:'#9a9590', rb:'rgba(0,0,0,.05)', hov:'#f9f8f5', hlb:'#fef08a', hlt:'#6b3d00', sb:'1px solid rgba(255,255,255,.18)', sbg:'rgba(255,255,255,.1)', sr:'8px', btnbg:hd, btntx:'#f5f4f0' },
-    cute:        { hdr:`background:${hd};color:#fff;border-radius:0 0 18px 18px;`, tb:'2px solid #ffc1d8', tr:'16px', tbg:'#fff', thbg:'#ffe4f0', thc:'#c0567a', rb:'#ffe4f0', hov:'#fff5f9', hlb:'#ffd6e7', hlt:'#8b1a4a', sb:'2px solid rgba(255,255,255,.4)', sbg:'rgba(255,255,255,.28)', sr:'999px', btnbg:hd, btntx:'#fff' },
+    cute:        { hdr:`background:${hd};color:#f8efe4;border-radius:0 0 10px 10px;`, tb:'1px solid #ead8c4', tr:'8px', tbg:'#fff', thbg:'#f8f0e8', thc:'#7A4A2A', rb:'#f2e8dc', hov:'#fdf5ee', hlb:'#f2e4d4', hlt:'#4a2010', sb:`1px solid rgba(248,239,228,0.22)`, sbg:`rgba(248,239,228,0.12)`, sr:'3px', btnbg:hd, btntx:'#f8efe4' },
     educational: { hdr:`background:${hd};color:#fff;`, tb:'1px solid #90caf9', tr:'8px', tbg:'#fff', thbg:'#e3f2fd', thc:'#1565c0', rb:'#e3f2fd', hov:'#f0f7ff', hlb:'#ffd54f', hlt:'#4a2c00', sb:'1px solid rgba(255,255,255,.3)', sbg:'rgba(255,255,255,.15)', sr:'6px', btnbg:hd, btntx:'#fff' },
     fun:         { hdr:`background:linear-gradient(90deg,${hd},#db2777);color:#fff;`, tb:'1px solid rgba(167,139,250,.18)', tr:'14px', tbg:'rgba(255,255,255,.02)', thbg:'rgba(124,58,237,.18)', thc:'#a78bfa', rb:'rgba(255,255,255,.04)', hov:'rgba(124,58,237,.08)', hlb:'rgba(167,139,250,.28)', hlt:'#e0d9ff', sb:'1px solid rgba(167,139,250,.35)', sbg:'rgba(255,255,255,.06)', sr:'10px', btnbg:hd, btntx:'#fff' },
   }[tpl] || {};
@@ -92,7 +92,7 @@ function getStyles(tpl, bg, hd, ac, tx){
 function renderApp(title, tpl, headers, rows, opts){
   const colors = {
     professional:{ bg:'#f4f3ef', hd:'#1a1a2e', ac:'#1a1a2e', tx:'#111111' },
-    cute:        { bg:'#fff0f6', hd:'#ff6b9d', ac:'#e91e8c', tx:'#3d1a2e' },
+    cute:        { bg:'#fdf8f6', hd:'#5c4a4a', ac:'#9a7070', tx:'#3a2828' },
     educational: { bg:'#f0f7ff', hd:'#1565c0', ac:'#1565c0', tx:'#0a2744' },
     fun:         { bg:'#0d0d1a', hd:'#7c3aed', ac:'#a78bfa', tx:'#f0ede6' },
   }[tpl] || { bg:'#f4f3ef', hd:'#1a1a2e', ac:'#1a1a2e', tx:'#111111' };
@@ -107,9 +107,9 @@ function renderApp(title, tpl, headers, rows, opts){
 
   document.getElementById('app').innerHTML = `
     <style>
-      body{background:${bg};color:${tx}}
+      body{background:${bg};color:${tx};font-family:${tpl==='cute'?'system-ui,sans-serif':'system-ui,sans-serif'}}
       header{${S.hdr}padding:.875rem 2rem;display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap;position:sticky;top:0;z-index:20}
-      .site-title{font-size:16px;font-weight:700;letter-spacing:-.02em}
+      .site-title{font-size:${tpl==='cute'?'13px':'16px'};font-weight:${tpl==='cute'?'400':'700'};letter-spacing:${tpl==='cute'?'0.14em':'-.02em'};text-transform:${tpl==='cute'?'uppercase':'none'};font-family:${tpl==='cute'?'Georgia,serif':'inherit'}}
       .hdr-right{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
       .search-wrap{position:relative;}
       .search-wrap svg{position:absolute;left:11px;top:50%;transform:translateY(-50%);pointer-events:none}
@@ -168,7 +168,7 @@ function renderApp(title, tpl, headers, rows, opts){
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="${ac}" stroke-width="2.5" opacity=".7"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
           <input id="search" type="text" placeholder="${esc(ph)}" oninput="applyFilters()">
         </div>
-        <button class="add-btn" onclick="openAddModal()">
+        <button class="add-btn" onclick="openAddModal()" style="display:none;">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
           Add Record
         </button>
